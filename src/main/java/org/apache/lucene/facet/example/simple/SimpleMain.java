@@ -98,12 +98,12 @@ public class SimpleMain {
         }
         FacetsCollector facetsCollector = new FacetsCollector(facetSearchParams, indexReader, taxo);
 
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
         Query q = new TermQuery(new Term(SimpleUtils.TEXT, searchString));
         BooleanQuery booleanQuery = new BooleanQuery();
         booleanQuery.add(q, BooleanClause.Occur.MUST);
@@ -134,43 +134,9 @@ public class SimpleMain {
             }
         }
 
-        
-        
-        
-        
-        
-        
-        // close readers
+
         taxo.close();
         indexReader.close();
 
-//        ExampleResult res = new ExampleResult();
-//        res.setFacetResults(facetRes);
-//        return res;
-    }
-
-    public ExampleResult runDrillDown(String searchString, CategoryPath categoryPathOfInterest) throws Exception {
-        // create Directories for the search index and for the taxonomy index
-        Directory indexDir = new RAMDirectory();
-        Directory taxoDir = new RAMDirectory();
-
-        // index the sample documents
-        ExampleUtils.log("index the sample documents...");
-        SimpleIndexer.index(indexDir, taxoDir);
-
-        // open readers
-        TaxonomyReader taxo = new DirectoryTaxonomyReader(taxoDir);
-        IndexReader indexReader = IndexReader.open(indexDir, true);
-
-        ExampleUtils.log("search the sample documents...");
-        List<FacetResult> facetRes = SimpleSearcher.searchWithDrillDown(searchString, indexReader, taxo, categoryPathOfInterest);
-
-        // close readers
-        taxo.close();
-        indexReader.close();
-
-        ExampleResult res = new ExampleResult();
-        res.setFacetResults(facetRes);
-        return res;
     }
 }
