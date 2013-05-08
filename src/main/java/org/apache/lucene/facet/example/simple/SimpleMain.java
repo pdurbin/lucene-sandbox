@@ -124,19 +124,25 @@ public class SimpleMain {
             ExampleUtils.log("no collection found... search will be global");
         }
 
-        Query q = new TermQuery(new Term(SimpleUtils.TEXT, searchString));
-        BooleanQuery booleanQuery = new BooleanQuery();
-        booleanQuery.add(q, BooleanClause.Occur.MUST);
+        Query finalQuery;
+        Query submittedQuery = new TermQuery(new Term(SimpleUtils.TEXT, searchString));
         if (dvnQuery.getCollections() != null) {
-            for (String col : dvnQuery.getCollections()) {
-                booleanQuery.add(limitingQuery, BooleanClause.Occur.MUST);
+            BooleanQuery queryAcrossAllCollections = new BooleanQuery();
+            for (String collection : dvnQuery.getCollections()) {
+                BooleanQuery submittedAndInCollection = new BooleanQuery();
+                Query collectionQuery = new TermQuery(new Term(SimpleUtils.TEXT, collection));
+                submittedAndInCollection.add(submittedQuery, BooleanClause.Occur.MUST);
+                submittedAndInCollection.add(collectionQuery, BooleanClause.Occur.MUST);
+                queryAcrossAllCollections.add(submittedAndInCollection, BooleanClause.Occur.SHOULD);
             }
+            finalQuery = queryAcrossAllCollections;
+        } else {
+            finalQuery = submittedQuery;
         }
-        q = booleanQuery;
-        searcher.search(q, MultiCollector.wrap(topDocsCollector, facetsCollector));
+        searcher.search(finalQuery, MultiCollector.wrap(topDocsCollector, facetsCollector));
 
         ScoreDoc[] hits = topDocsCollector.topDocs().scoreDocs;
-        ExampleUtils.log(hits.length + " documents found with query " + "\"" + q + "\"");
+        ExampleUtils.log(hits.length + " documents found with query " + "\"" + finalQuery + "\"");
         for (int i = 0; i < hits.length; i++) {
             ScoreDoc scoreDoc = hits[i];
             Document d = searcher.doc(scoreDoc.doc);
