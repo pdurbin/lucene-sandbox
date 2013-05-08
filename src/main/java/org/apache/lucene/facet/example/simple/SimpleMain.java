@@ -72,7 +72,7 @@ public class SimpleMain {
         dvnQuery2.setQueryString("finch");
         List<String> collections2 = new ArrayList<String>();
         collections2.add("yellow");
-//        dvnQuery2.setCollection("yellow");
+        collections2.add("spruce");
         dvnQuery2.setCollections(collections2);
         queries.add(dvnQuery2);
 
@@ -107,24 +107,19 @@ public class SimpleMain {
 
         Query limitingQuery = null;
         if (dvnQuery.getCollections() != null) {
-            for (CountFacetRequest countFacetRequest : countFacetRequestsList) {
-                
+            for (String col : dvnQuery.getCollections()) {
+                ExampleUtils.log("collection found: " + col + "... search will be limited");
+                Query q = new TermQuery(new Term(SimpleUtils.TEXT, col));
+                limitingQuery = q;
+                searcher.search(q, MultiCollector.wrap(topDocsCollector, facetsCollector));
+                ScoreDoc[] hits = topDocsCollector.topDocs().scoreDocs;
+                for (int i = 0; i < hits.length; i++) {
+                    ScoreDoc scoreDoc = hits[i];
+                    Document d = searcher.doc(scoreDoc.doc);
+                    ExampleUtils.log("- fav " + i + ": " + d.get("text"));
+                }
+                topDocsCollector = TopScoreDocCollector.create(10, true);
             }
-            for (Iterator<String> it = dvnQuery.getCollections().iterator(); it.hasNext();) {
-                String col = it.next();
-                
-            }
-            ExampleUtils.log("collection found: " + dvnQuery.getCollections().get(0) + "... search will be limited");
-            Query q = new TermQuery(new Term(SimpleUtils.TEXT, dvnQuery.getCollections().get(0)));
-            limitingQuery = q;
-            searcher.search(q, MultiCollector.wrap(topDocsCollector, facetsCollector));
-            ScoreDoc[] hits = topDocsCollector.topDocs().scoreDocs;
-            for (int i = 0; i < hits.length; i++) {
-                ScoreDoc scoreDoc = hits[i];
-                Document d = searcher.doc(scoreDoc.doc);
-                ExampleUtils.log("- fav " + i + ": " + d.get("text"));
-            }
-            topDocsCollector = TopScoreDocCollector.create(10, true);
         } else {
             ExampleUtils.log("no collection found... search will be global");
         }
@@ -133,7 +128,9 @@ public class SimpleMain {
         BooleanQuery booleanQuery = new BooleanQuery();
         booleanQuery.add(q, BooleanClause.Occur.MUST);
         if (dvnQuery.getCollections() != null) {
-            booleanQuery.add(limitingQuery, BooleanClause.Occur.MUST);
+            for (String col : dvnQuery.getCollections()) {
+                booleanQuery.add(limitingQuery, BooleanClause.Occur.MUST);
+            }
         }
         q = booleanQuery;
         searcher.search(q, MultiCollector.wrap(topDocsCollector, facetsCollector));
