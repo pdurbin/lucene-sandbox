@@ -62,23 +62,27 @@ public class SimpleMain {
      */
     public static void main(String[] args) throws Exception {
 
-        List<String> searches = new ArrayList<String>();
-        searches.add("blue");
-        searches.add("finch");
+        List<DvnQuery> queries = new ArrayList<DvnQuery>();
 
-        String commonString = "oak";
-        for (String searchString : searches) {
-            search(searchString, commonString);
-            ExampleUtils.log("----");
-//            List<FacetResult> facetResults = new SimpleMain().search(searchString).getFacetResults();
-//        ExampleUtils.log(facetResults);
+        DvnQuery dvnQuery1 = new DvnQuery();
+        dvnQuery1.setQueryString("finch");
+        queries.add(dvnQuery1);
+
+        DvnQuery dvnQuery2 = new DvnQuery();
+        dvnQuery2.setQueryString("finch");
+        dvnQuery2.setCollection("yellow");
+        queries.add(dvnQuery2);
+
+        for (DvnQuery query : queries) {
+            search(query);
+            ExampleUtils.log("---");
         }
+
     }
 
-//    public List<FacetResult> search(String searchString) throws Exception {
-    public static void search(String searchString, String commonString) throws Exception {
-//        ExampleUtils.log("searching for " + searchString + " and " + commonString);
-        // create Directories for the search index and for the taxonomy index
+    public static void search(DvnQuery dvnQuery) throws Exception {
+        String searchString = dvnQuery.getQueryString();
+        ExampleUtils.log("searching for " + searchString);
         Directory indexDir = new RAMDirectory();
         Directory taxoDir = new RAMDirectory();
         SimpleIndexer.index(indexDir, taxoDir);
@@ -98,17 +102,29 @@ public class SimpleMain {
         }
         FacetsCollector facetsCollector = new FacetsCollector(facetSearchParams, indexReader, taxo);
 
-
-
-
-
-
+        Query limitingQuery = null;
+        if (dvnQuery.getCollection() != null) {
+            ExampleUtils.log("collection found: " + dvnQuery.getCollection() + "... search will be limited");
+            Query q = new TermQuery(new Term(SimpleUtils.TEXT, dvnQuery.getCollection()));
+            limitingQuery = q;
+            searcher.search(q, MultiCollector.wrap(topDocsCollector, facetsCollector));
+            ScoreDoc[] hits = topDocsCollector.topDocs().scoreDocs;
+            for (int i = 0; i < hits.length; i++) {
+                ScoreDoc scoreDoc = hits[i];
+                Document d = searcher.doc(scoreDoc.doc);
+                ExampleUtils.log("- fav " + i + ": " + d.get("text"));
+            }
+            topDocsCollector = TopScoreDocCollector.create(10, true);
+        } else {
+            ExampleUtils.log("no collection found... search will be global");
+        }
 
         Query q = new TermQuery(new Term(SimpleUtils.TEXT, searchString));
         BooleanQuery booleanQuery = new BooleanQuery();
         booleanQuery.add(q, BooleanClause.Occur.MUST);
-        Query searchQuery = new TermQuery(new Term(SimpleUtils.TEXT, commonString));
-        booleanQuery.add(searchQuery, BooleanClause.Occur.MUST);
+        if (dvnQuery.getCollection() != null) {
+            booleanQuery.add(limitingQuery, BooleanClause.Occur.MUST);
+        }
         q = booleanQuery;
         searcher.search(q, MultiCollector.wrap(topDocsCollector, facetsCollector));
 
@@ -117,23 +133,8 @@ public class SimpleMain {
         for (int i = 0; i < hits.length; i++) {
             ScoreDoc scoreDoc = hits[i];
             Document d = searcher.doc(scoreDoc.doc);
-//            ExampleUtils.log("- title " + i + ": " + d.get("title"));
             ExampleUtils.log("- text " + i + ": " + d.get("text"));
         }
-        List<FacetResult> res = facetsCollector.getFacetResults();
-//        ExampleUtils.log(res);
-
-        for (int i = 0; i < res.size(); i++) {
-            FacetResult facetResult = res.get(i);
-//            ExampleUtils.log("- category " + i + ": " + facetResult.getFacetResultNode().getLabel());
-            for (FacetResultNode n : facetResult.getFacetResultNode().getSubResults()) {
-                CategoryPath label = n.getLabel();
-                String last = n.getLabel().lastComponent().toString();
-                Double hits2 = n.getValue();
-//                ExampleUtils.log("  - expect " + hits2.intValue() + " hit(s) from a faceted search for \"" + label + "\"");
-            }
-        }
-
 
         taxo.close();
         indexReader.close();
