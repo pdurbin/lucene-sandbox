@@ -70,7 +70,10 @@ public class SimpleMain {
 
         DvnQuery dvnQuery2 = new DvnQuery();
         dvnQuery2.setQueryString("finch");
-        dvnQuery2.setCollection("yellow");
+        List<String> collections2 = new ArrayList<String>();
+        collections2.add("yellow");
+//        dvnQuery2.setCollection("yellow");
+        dvnQuery2.setCollections(collections2);
         queries.add(dvnQuery2);
 
         for (DvnQuery query : queries) {
@@ -103,9 +106,16 @@ public class SimpleMain {
         FacetsCollector facetsCollector = new FacetsCollector(facetSearchParams, indexReader, taxo);
 
         Query limitingQuery = null;
-        if (dvnQuery.getCollection() != null) {
-            ExampleUtils.log("collection found: " + dvnQuery.getCollection() + "... search will be limited");
-            Query q = new TermQuery(new Term(SimpleUtils.TEXT, dvnQuery.getCollection()));
+        if (dvnQuery.getCollections() != null) {
+            for (CountFacetRequest countFacetRequest : countFacetRequestsList) {
+                
+            }
+            for (Iterator<String> it = dvnQuery.getCollections().iterator(); it.hasNext();) {
+                String col = it.next();
+                
+            }
+            ExampleUtils.log("collection found: " + dvnQuery.getCollections().get(0) + "... search will be limited");
+            Query q = new TermQuery(new Term(SimpleUtils.TEXT, dvnQuery.getCollections().get(0)));
             limitingQuery = q;
             searcher.search(q, MultiCollector.wrap(topDocsCollector, facetsCollector));
             ScoreDoc[] hits = topDocsCollector.topDocs().scoreDocs;
@@ -122,7 +132,7 @@ public class SimpleMain {
         Query q = new TermQuery(new Term(SimpleUtils.TEXT, searchString));
         BooleanQuery booleanQuery = new BooleanQuery();
         booleanQuery.add(q, BooleanClause.Occur.MUST);
-        if (dvnQuery.getCollection() != null) {
+        if (dvnQuery.getCollections() != null) {
             booleanQuery.add(limitingQuery, BooleanClause.Occur.MUST);
         }
         q = booleanQuery;

@@ -1,16 +1,19 @@
 package org.apache.lucene.facet.example.simple;
 
+import java.util.List;
+
 class DvnQuery {
 
     private String queryString;
-    private String collection;
+//    private String collection;
+    private List<String> collections;
 
-    public String getCollection() {
-        return collection;
+    public List<String> getCollections() {
+        return collections;
     }
 
-    public void setCollection(String collection) {
-        this.collection = collection;
+    public void setCollections(List<String> collections) {
+        this.collections = collections;
     }
 
     public String getQueryString() {
